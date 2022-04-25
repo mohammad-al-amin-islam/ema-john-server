@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 
 const app = express();
@@ -23,10 +23,39 @@ async function run() {
 
 
         app.get('/products', async (req, res) => {
+            console.log(req.query);
+            const page = parseInt(req.query.page);
+            const size = parseInt(req.query.size);
             const query = {};
             const cursor = productCollection.find(query);
-            const result = await cursor.toArray();
+            let result;
+            if (page || size) {
+                result = await cursor.skip(page * size).limit(size).toArray();
+
+            }
+            else {
+                result = await cursor.toArray();
+            }
             // const result = await cursor.limit(10).toArray(); to get limited data
+            res.send(result);
+        });
+
+        app.get('/count', async (req, res) => {
+            // previouly used
+            // const query = {};
+            // const cursor = productCollection.find(query);
+            // const result = await cursor.count();
+
+            const result = await productCollection.estimatedDocumentCount();
+            res.send({ result });
+        });
+        app.post('/productKeys', async (req, res) => {
+            const keys = req.body;
+            const ids = keys.map(id => ObjectId(id));
+            const query = { _id: { $in: ids } };
+            const cursor = productCollection.find(query);
+            const result = await cursor.toArray();
+            console.log(keys);
             res.send(result);
         })
 
